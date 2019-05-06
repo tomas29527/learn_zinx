@@ -43,7 +43,7 @@ func (s *Server) Start() {
 
 		//3 启动server网络连接业务
 		for {
-			conn, err := listener.Accept()
+			conn, err := listener.AcceptTCP()
 			if err != nil {
 				fmt.Println("Accept err ", err)
 				continue
