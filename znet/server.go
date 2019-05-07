@@ -1,6 +1,7 @@
 package znet
 
 import (
+	"errors"
 	"fmt"
 	"learn_zinx/ziface"
 	"net"
@@ -17,6 +18,17 @@ type Server struct {
 	IP string
 	//服务绑定的端口
 	Port int
+}
+
+//============== 定义当前客户端链接的handle api ===========
+func CallBackToClient(conn *net.TCPConn, data []byte, cnt int) error {
+	//回显业务
+	fmt.Println("[Conn Handle] CallBackToClient ... ")
+	if _, err := conn.Write(data[:cnt]); err != nil {
+		fmt.Println("write back buf err ", err)
+		return errors.New("CallBackToClient error")
+	}
+	return nil
 }
 
 //开启网络服务
@@ -42,6 +54,7 @@ func (s *Server) Start() {
 		fmt.Println("start Zinx server  ", s.Name, " succ, now listenning...")
 
 		//3 启动server网络连接业务
+		var cid uint32 = 0
 		for {
 			conn, err := listener.AcceptTCP()
 			if err != nil {
@@ -53,25 +66,9 @@ func (s *Server) Start() {
 
 			//3.3 TODO Server.Start() 处理该新连接请求的 业务 方法， 此时应该有 handler 和 conn是绑定的
 
-			//我们这里暂时做一个最大512字节的回显服务
-			go func() {
-				//不断的循环从客户端获取数据
-				for {
-					buf := make([]byte, 512)
-					cnt, err := conn.Read(buf)
-					if err != nil {
-						fmt.Printf("recv buf err %v\n", err)
-						continue
-					}
-					fmt.Println("read client msg:", string(buf))
-					//回显
-					if _, err := conn.Write(buf[:cnt]); err != nil {
-						fmt.Println("write back buf err ", err)
-						continue
-					}
-				}
-
-			}()
+			c := NewConnection(conn, cid, CallBackToClient)
+			go c.Start()
+			cid++
 		}
 	}()
 }
