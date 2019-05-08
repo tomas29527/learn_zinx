@@ -36,9 +36,12 @@ func (c *Connection) readData() {
 		fmt.Printf("server is recive data：%s", string(buf))
 		r := NewRequest(c, buf)
 		//调用当前链接业务(这里执行的是当前conn的绑定的handle方法)
-		c.Handle.PreHandle(r)
-		c.Handle.Handle(r)
-		c.Handle.PostHandle(r)
+		go func(req ziface.IRequest) {
+			c.Handle.PreHandle(req)
+			c.Handle.Handle(req)
+			c.Handle.PostHandle(req)
+		}(r)
+
 	}
 }
 
