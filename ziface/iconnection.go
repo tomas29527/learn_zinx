@@ -16,8 +16,6 @@ type IConnection interface {
 	GetConnId() uint32
 	//客户端连接地址
 	GetRemoteAddr() net.Addr
-	//发送数据
-	Send(date []byte)
 }
 
 //定义处理数据的函数

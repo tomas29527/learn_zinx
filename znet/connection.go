@@ -14,7 +14,7 @@ type Connection struct {
 	//是否关闭
 	isClosed bool
 	//处理数据函数
-	HandleApi ziface.HandleFunc
+	Handle ziface.IRouter
 	//退出的channle
 	ExitChan chan bool
 }
@@ -26,7 +26,7 @@ func (c *Connection) readData() {
 	var buf []byte
 	for {
 		buf = make([]byte, 512)
-		cnt, err := c.Conn.Read(buf)
+		_, err := c.Conn.Read(buf)
 		if err != nil {
 			fmt.Println("read is err:", err)
 			c.ExitChan <- true
@@ -34,12 +34,11 @@ func (c *Connection) readData() {
 		}
 
 		fmt.Printf("server is recive data：%s", string(buf))
+		r := NewRequest(c, buf)
 		//调用当前链接业务(这里执行的是当前conn的绑定的handle方法)
-		if err := c.HandleApi(c.Conn, buf, cnt); err != nil {
-			fmt.Println("connID ", c.Connid, " handle is error")
-			c.ExitChan <- true
-			return
-		}
+		c.Handle.PreHandle(r)
+		c.Handle.Handle(r)
+		c.Handle.PostHandle(r)
 	}
 }
 
@@ -84,18 +83,13 @@ func (c *Connection) GetRemoteAddr() net.Addr {
 	return c.Conn.RemoteAddr()
 }
 
-//发送数据
-func (c *Connection) Send(date []byte) {
-
-}
-
-func NewConnection(conn *net.TCPConn, cid uint32, handle ziface.HandleFunc) (c *Connection) {
+func NewConnection(conn *net.TCPConn, cid uint32, handle ziface.IRouter) (c *Connection) {
 	c = &Connection{
-		Conn:      conn,
-		Connid:    cid,
-		isClosed:  false,
-		HandleApi: handle,
-		ExitChan:  make(chan bool, 1),
+		Conn:     conn,
+		Connid:   cid,
+		isClosed: false,
+		Handle:   handle,
+		ExitChan: make(chan bool, 1),
 	}
 	return
 }
