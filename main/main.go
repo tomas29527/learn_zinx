@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"learn_zinx/ziface"
 	"learn_zinx/znet"
+	"os"
 )
 
 type Router struct {
@@ -24,8 +27,21 @@ func (b *Router) PostHandle(r ziface.IRequest) {
 	fmt.Println("======do PreHandle=======")
 }
 func main() {
-	newS := znet.NewServer("[zinx V0.1]")
-	newS.AddRouter(new(Router))
-	newS.Serve()
+	//newS := znet.NewServer("[zinx V0.1]")
+	//newS.AddRouter(new(Router))
+	//newS.Serve()
+	var buf []byte = make([]byte, 512)
+	file, err := os.Open("E:\\ccc.txt")
+	if err != nil {
+		fmt.Printf("open file is err", err)
+	}
+	reader := bufio.NewReader(file)
+	//reader.Read(buf)
 
+	n, err := io.ReadFull(reader, buf)
+	if err != nil {
+		fmt.Println("read is err:", err)
+	}
+	fmt.Println(string(buf))
+	fmt.Println("====n=:", n)
 }
