@@ -56,11 +56,8 @@ func (s *Server) Start() {
 				fmt.Println("Accept err ", err)
 				continue
 			}
-
 			//3.2 TODO Server.Start() 设置服务器最大连接控制,如果超过最大连接，那么则关闭此新的连接
-
 			//3.3 TODO Server.Start() 处理该新连接请求的 业务 方法， 此时应该有 handler 和 conn是绑定的
-
 			c := NewConnection(conn, cid, s.Router)
 			go c.Start()
 			cid++

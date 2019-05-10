@@ -2,6 +2,7 @@ package znet
 
 import (
 	"fmt"
+	"io"
 	"learn_zinx/ziface"
 	"net"
 )
@@ -23,18 +24,29 @@ func (c *Connection) readData() {
 	fmt.Println(c.GetRemoteAddr().String(), "is begin read ")
 	defer fmt.Println(c.GetRemoteAddr().String(), " conn reader exit!")
 	defer c.Stop()
-	var buf []byte
+	var headbuf []byte
 	for {
-		buf = make([]byte, 512)
-		_, err := c.Conn.Read(buf)
-		if err != nil {
-			fmt.Println("read is err:", err)
-			c.ExitChan <- true
-			continue
+		//进行拆包 读取包头
+		dp := NewDataPack()
+		headbuf = make([]byte, dp.GetHeadLen())
+		io.ReadFull(c.Conn, headbuf)
+		//头信息拆包
+		message, e := dp.UnPack(headbuf)
+		if e != nil {
+			fmt.Println("UnPack is err", e)
 		}
-
-		fmt.Printf("server is recive data：%s", string(buf))
-		r := NewRequest(c, buf)
+		//第二次读出数据
+		if message.GetMsgLen() > 0 {
+			dataBuf := make([]byte, message.GetMsgLen())
+			_, err := io.ReadFull(c.Conn, dataBuf)
+			if err != nil {
+				fmt.Println("read dataBuf is err", err)
+				return
+			}
+			message.SetData(dataBuf)
+		}
+		r := NewRequest(c, message)
+		fmt.Println("---> Recv MsgID: ", message.GetMsgId(), ", datalen = ", message.GetMsgLen(), "data = ", string(message.GetData()))
 
 		//调用当前链接业务(这里执行的是当前conn的绑定的handle方法)
 		go func(req ziface.IRequest) {
@@ -42,7 +54,6 @@ func (c *Connection) readData() {
 			c.Handle.Handle(req)
 			c.Handle.PostHandle(req)
 		}(r)
-
 	}
 }
 
@@ -51,7 +62,6 @@ func (c *Connection) Start() {
 	fmt.Printf("connc is read connid:%d\n", c.Connid)
 	//读数据
 	go c.readData()
-
 	select {
 	case <-c.ExitChan:
 		c.Stop()
