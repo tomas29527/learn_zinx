@@ -20,6 +20,11 @@ func (r *Request) GetData() []byte {
 	return r.Msg.GetData()
 }
 
+//获取数据
+func (r *Request) GetMsgID() uint32 {
+	return r.Msg.GetMsgId()
+}
+
 func NewRequest(conn ziface.IConnection, msg ziface.IMessage) (r *Request) {
 	r = &Request{
 		Conn: conn,

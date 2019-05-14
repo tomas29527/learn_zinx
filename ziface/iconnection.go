@@ -16,7 +16,8 @@ type IConnection interface {
 	GetConnId() uint32
 	//客户端连接地址
 	GetRemoteAddr() net.Addr
+	//发送消息
+	SendMsg(msgId uint32, data []byte) error
+	//写数据
+	StartWriter()
 }
-
-//定义处理数据的函数
-type HandleFunc func(*net.TCPConn, []byte, int) error

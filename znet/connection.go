@@ -1,6 +1,7 @@
 package znet
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"learn_zinx/ziface"
@@ -15,9 +16,11 @@ type Connection struct {
 	//是否关闭
 	isClosed bool
 	//处理数据函数
-	Handle ziface.IRouter
+	Handlers ziface.IMsgHandler
 	//退出的channle
 	ExitChan chan bool
+	//无缓冲d管道，用于读、写Goroutine之间的消息通信
+	msgChan chan []byte
 }
 
 func (c *Connection) readData() {
@@ -29,7 +32,11 @@ func (c *Connection) readData() {
 		//进行拆包 读取包头
 		dp := NewDataPack()
 		headbuf = make([]byte, dp.GetHeadLen())
-		io.ReadFull(c.Conn, headbuf)
+		_, err := io.ReadFull(c.Conn, headbuf)
+		if err != nil {
+			fmt.Println("读取消息头信息出错:", err)
+			return
+		}
 		//头信息拆包
 		message, e := dp.UnPack(headbuf)
 		if e != nil {
@@ -49,11 +56,27 @@ func (c *Connection) readData() {
 		fmt.Println("---> Recv MsgID: ", message.GetMsgId(), ", datalen = ", message.GetMsgLen(), "data = ", string(message.GetData()))
 
 		//调用当前链接业务(这里执行的是当前conn的绑定的handle方法)
-		go func(req ziface.IRequest) {
-			c.Handle.PreHandle(req)
-			c.Handle.Handle(req)
-			c.Handle.PostHandle(req)
-		}(r)
+		go c.Handlers.DoMsgHandler(r)
+	}
+}
+
+//写数据
+func (c *Connection) StartWriter() {
+	fmt.Println("[Writer Goroutine is running]")
+	defer fmt.Println("[conn Writer exit!]", c.Conn.RemoteAddr().String())
+	//不断的阻塞的等待channel的消息，进行写给客户端
+	for {
+		select {
+		case data := <-c.msgChan:
+			//有数据要写给客户端
+			if _, err := c.Conn.Write(data); err != nil {
+				fmt.Println("Send data error, ", err)
+				return
+			}
+		case <-c.ExitChan:
+			//代表Reader已经退出，此时Writer也要推出
+			return
+		}
 	}
 }
 
@@ -62,10 +85,8 @@ func (c *Connection) Start() {
 	fmt.Printf("connc is read connid:%d\n", c.Connid)
 	//读数据
 	go c.readData()
-	select {
-	case <-c.ExitChan:
-		c.Stop()
-	}
+	//写数据
+	go c.StartWriter()
 }
 
 //停止链接
@@ -76,10 +97,13 @@ func (c *Connection) Stop() {
 	}
 
 	c.isClosed = true
-
+	//关闭socket链接
 	c.Conn.Close()
+	//告知Writer关闭
 	c.ExitChan <- true
+
 	close(c.ExitChan)
+	close(c.msgChan)
 }
 
 //获取当前连接
@@ -97,13 +121,32 @@ func (c *Connection) GetRemoteAddr() net.Addr {
 	return c.Conn.RemoteAddr()
 }
 
-func NewConnection(conn *net.TCPConn, cid uint32, handle ziface.IRouter) (c *Connection) {
+func (c *Connection) SendMsg(msgId uint32, data []byte) error {
+	if c.isClosed == true {
+		return errors.New("Connection closed when send msg")
+	}
+
+	//将data进行封包 MsgDataLen|MsgID|Data
+	dp := NewDataPack()
+
+	//MsgDataLen|MsgID|Data
+	binaryMsg, err := dp.Pack(NewMessage(msgId, data))
+	if err != nil {
+		fmt.Println("Pack error msg id = ", msgId)
+		return errors.New("Pack error msg")
+	}
+	c.msgChan <- binaryMsg
+	return nil
+}
+
+func NewConnection(conn *net.TCPConn, cid uint32, handlers ziface.IMsgHandler) (c *Connection) {
 	c = &Connection{
 		Conn:     conn,
 		Connid:   cid,
 		isClosed: false,
-		Handle:   handle,
+		Handlers: handlers,
 		ExitChan: make(chan bool, 1),
+		msgChan:  make(chan []byte),
 	}
 	return
 }

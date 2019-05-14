@@ -56,7 +56,6 @@ func (dp *DataPack) UnPack(buf []byte) (ziface.IMessage, error) {
 
 	//创建一个从输入二进制数据的ioReader
 	dataBuff := bytes.NewReader(buf)
-
 	//只解压head信息，得到datalen和MsgID
 	msg := &Message{}
 	//读MsgID
