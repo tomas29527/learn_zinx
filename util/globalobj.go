@@ -19,6 +19,9 @@ type GlobalObj struct {
 	MaxPackageSize   uint32 //当前Zinx框架数据包的最大值
 	WorkerPoolSize   uint32 //当前业务工作Worker池的Goroutine数量
 	MaxWorkerTaskLen uint32 //Zinx框架允许用户最多开辟多少个Worker(限定条件)
+
+	TaskPoolSize   uint32 //任务池数量大小
+	MaxTaskChanLen uint32 //任务队列最大值
 }
 
 var Global *GlobalObj
@@ -32,4 +35,6 @@ func init() {
 	Global.MaxConn = 100
 	Global.MaxPackageSize = 512
 	Global.Version = "V1.0.1"
+	Global.TaskPoolSize = 10
+	Global.MaxTaskChanLen = 1024
 }

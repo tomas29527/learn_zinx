@@ -31,6 +31,9 @@ func (s *Server) AddRouter(msgID uint32, router ziface.IRouter) {
 func (s *Server) Start() {
 	fmt.Printf("[START] Server listenner at IP: %s, Port %d, is starting\n", s.IP, s.Port)
 
+	//先初始化工作池
+	s.MsgHandler.InitTaskPool()
+
 	//开启一个go去做服务端Linster业务
 	go func() {
 		//解析地址
@@ -50,7 +53,7 @@ func (s *Server) Start() {
 		fmt.Println("start Zinx server  ", s.Name, " succ, now listenning...")
 
 		//3 启动server网络连接业务
-		var cid uint32 = 0
+		var cid uint32 = 1000
 		for {
 			conn, err := listener.AcceptTCP()
 			if err != nil {

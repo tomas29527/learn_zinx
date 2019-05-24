@@ -55,8 +55,14 @@ func (c *Connection) readData() {
 		r := NewRequest(c, message)
 		fmt.Println("---> Recv MsgID: ", message.GetMsgId(), ", datalen = ", message.GetMsgLen(), "data = ", string(message.GetData()))
 
-		//调用当前链接业务(这里执行的是当前conn的绑定的handle方法)
-		go c.Handlers.DoMsgHandler(r)
+		//判断是否初始化任务池
+		if c.Handlers.GetTaskPoolSize() > 0 {
+			c.Handlers.PushToTaskQueue(r)
+		} else {
+			//调用当前链接业务(这里执行的是当前conn的绑定的handle方法)
+			go c.Handlers.DoMsgHandler(r)
+		}
+
 	}
 }
 
