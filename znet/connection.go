@@ -95,6 +95,9 @@ func (c *Connection) Start() {
 	go c.readData()
 	//写数据
 	go c.StartWriter()
+
+	//调用链接创建的开始函数
+	c.Server.CallOnConnStart(c)
 }
 
 //停止链接
@@ -112,6 +115,9 @@ func (c *Connection) Stop() {
 
 	//把当前链接移除
 	c.Server.GetConnManager().Remover(c)
+
+	//调用下线通知
+	c.Server.CallOnConnStop(c)
 
 	close(c.ExitChan)
 	close(c.msgChan)
@@ -148,6 +154,11 @@ func (c *Connection) SendMsg(msgId uint32, data []byte) error {
 	}
 	c.msgChan <- binaryMsg
 	return nil
+}
+
+//获取服务
+func (c *Connection) GetTcpServer() ziface.IServer {
+	return c.Server
 }
 
 func NewConnection(conn *net.TCPConn, cid uint32, handlers ziface.IMsgHandler, server ziface.IServer) (c *Connection) {

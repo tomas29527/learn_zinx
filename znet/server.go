@@ -22,6 +22,10 @@ type Server struct {
 	MsgHandler ziface.IMsgHandler
 	//链接管理属性
 	ConnManager ziface.IConnManager
+	// 创建链接时候调用的函数
+	OnConnStart func(ziface.IConnection)
+	//断开链接的时候调用的函数
+	OnConnStop func(ziface.IConnection)
 }
 
 //添加路由
@@ -98,6 +102,30 @@ func (s *Server) Serve() {
 //获取链接管理对象
 func (s *Server) GetConnManager() ziface.IConnManager {
 	return s.ConnManager
+}
+
+//注册OnConnStart 钩子函数的方法
+func (s *Server) SetOnConnStart(hookfunc func(conneciton ziface.IConnection)) {
+	s.OnConnStart = hookfunc
+}
+
+//注册OnConnStop钩子函数的方法
+func (s *Server) SetOnConnStop(hookfunc func(conneciton ziface.IConnection)) {
+	s.OnConnStop = hookfunc
+}
+
+//调用OnConnStart钩子函数的方法
+func (s *Server) CallOnConnStart(conneciton ziface.IConnection) {
+	if s.OnConnStart != nil {
+		s.OnConnStart(conneciton)
+	}
+}
+
+//调用OnConnStop钩子函数的方法
+func (s *Server) CallOnConnStop(conneciton ziface.IConnection) {
+	if s.OnConnStop != nil {
+		s.OnConnStop(conneciton)
+	}
 }
 
 func NewServer(name string) (newS ziface.IServer) {

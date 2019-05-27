@@ -11,4 +11,7 @@ type IConnManager interface {
 	Len() int
 	//清除链接
 	ClearConn()
+
+	//向其他链接发送下线消息
+	SentMsgToOtherDown()
 }

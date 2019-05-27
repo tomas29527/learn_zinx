@@ -20,4 +20,6 @@ type IConnection interface {
 	SendMsg(msgId uint32, data []byte) error
 	//写数据
 	StartWriter()
+	//获取服务
+	GetTcpServer() IServer
 }

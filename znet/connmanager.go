@@ -60,6 +60,19 @@ func (c *ConnManager) ClearConn() {
 	fmt.Println("Clear All connections succ!  conn num = ", c.Len())
 }
 
+//向其他链接发送下线消息
+func (c *ConnManager) SentMsgToOtherDown() {
+	c.Rwsync.Lock()
+	defer c.Rwsync.Unlock()
+	//向其他用户发送下线消息
+	for _, conn := range c.connections {
+		fmt.Println("=========SentMsgToOtherDown=======")
+		msg := fmt.Sprintf("用户下线了")
+		//停止链接
+		conn.SendMsg(456, []byte(msg))
+	}
+}
+
 func NewConnManager() *ConnManager {
 	connManager := &ConnManager{
 		connections: make(map[uint32]ziface.IConnection),
