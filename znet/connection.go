@@ -9,6 +9,8 @@ import (
 )
 
 type Connection struct {
+	//服务对象
+	Server ziface.IServer
 	//连接
 	Conn *net.TCPConn
 	//连接id
@@ -108,6 +110,9 @@ func (c *Connection) Stop() {
 	//告知Writer关闭
 	c.ExitChan <- true
 
+	//把当前链接移除
+	c.Server.GetConnManager().Remover(c)
+
 	close(c.ExitChan)
 	close(c.msgChan)
 }
@@ -145,7 +150,7 @@ func (c *Connection) SendMsg(msgId uint32, data []byte) error {
 	return nil
 }
 
-func NewConnection(conn *net.TCPConn, cid uint32, handlers ziface.IMsgHandler) (c *Connection) {
+func NewConnection(conn *net.TCPConn, cid uint32, handlers ziface.IMsgHandler, server ziface.IServer) (c *Connection) {
 	c = &Connection{
 		Conn:     conn,
 		Connid:   cid,
@@ -153,6 +158,10 @@ func NewConnection(conn *net.TCPConn, cid uint32, handlers ziface.IMsgHandler) (
 		Handlers: handlers,
 		ExitChan: make(chan bool, 1),
 		msgChan:  make(chan []byte),
+		Server:   server,
 	}
+	//把链接纳入链接管理模块
+	c.Server.GetConnManager().Add(c)
+
 	return
 }

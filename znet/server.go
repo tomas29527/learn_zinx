@@ -2,6 +2,7 @@ package znet
 
 import (
 	"fmt"
+	"learn_zinx/util"
 	"learn_zinx/ziface"
 	"net"
 	"time"
@@ -19,6 +20,8 @@ type Server struct {
 	Port int
 	//当前server的消息管理模块， 用来绑定MsgID和对应的处理业务API关系
 	MsgHandler ziface.IMsgHandler
+	//链接管理属性
+	ConnManager ziface.IConnManager
 }
 
 //添加路由
@@ -61,8 +64,13 @@ func (s *Server) Start() {
 				continue
 			}
 			//3.2 TODO Server.Start() 设置服务器最大连接控制,如果超过最大连接，那么则关闭此新的连接
+			if s.ConnManager.Len() >= util.Global.MaxConn {
+				fmt.Println("conn is too manny ")
+				conn.Close()
+				continue
+			}
 			//3.3 TODO Server.Start() 处理该新连接请求的 业务 方法， 此时应该有 handler 和 conn是绑定的
-			c := NewConnection(conn, cid, s.MsgHandler)
+			c := NewConnection(conn, cid, s.MsgHandler, s)
 			go c.Start()
 			cid++
 		}
@@ -73,6 +81,7 @@ func (s *Server) Stop() {
 	fmt.Println("[STOP] Zinx server , name ", s.Name)
 
 	//TODO  Server.Stop() 将其他需要清理的连接信息或者其他信息 也要一并停止或者清理
+	s.ConnManager.ClearConn()
 }
 
 func (s *Server) Serve() {
@@ -86,13 +95,19 @@ func (s *Server) Serve() {
 	}
 }
 
+//获取链接管理对象
+func (s *Server) GetConnManager() ziface.IConnManager {
+	return s.ConnManager
+}
+
 func NewServer(name string) (newS ziface.IServer) {
 	newS = &Server{
-		Name:       name,
-		IPVersion:  "tcp4",
-		IP:         "0.0.0.0",
-		Port:       7777,
-		MsgHandler: NewMsgHandler(),
+		Name:        name,
+		IPVersion:   "tcp4",
+		IP:          "0.0.0.0",
+		Port:        7777,
+		MsgHandler:  NewMsgHandler(),
+		ConnManager: NewConnManager(),
 	}
 	return
 }

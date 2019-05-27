@@ -32,7 +32,7 @@ func init() {
 	Global.Name = "zinx server"
 	Global.Host = "0.0.0.0"
 	Global.TcpPort = 8787
-	Global.MaxConn = 100
+	Global.MaxConn = 3
 	Global.MaxPackageSize = 512
 	Global.Version = "V1.0.1"
 	Global.TaskPoolSize = 10
